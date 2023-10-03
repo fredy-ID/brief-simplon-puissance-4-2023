@@ -5,56 +5,58 @@
                 <div class="absolute c-grid flex h-full w-full"></div>
                 <div class="h-full w-full flex flex-col c-cells">
                     <div v-for="(col, rowIndex) in grid" :key="rowIndex" class="flex flew-row grow">
-                        <div v-for="(cell, colIndex) in col" :key="colIndex" class="cell grow h-full w-full flex items-center justify-center relative">
+                        <div v-for="(cell, colIndex) in col" :key="colIndex" class="cell grow h-full w-full flex items-center justify-center relative" :data-row="rowIndex" :data-col="colIndex">
                             <div :class="discColor(cell)" :style="{'--row': rowIndex}">
                             </div>
                         </div>
                     </div>
                 </div>
                 <div v-if="color && color!='E'" class="columns absolute flex items-end">
-                    <button class="flex justify-center column w-full m-0 p-0" v-for="(col, index) in gridDolumns" :key="index" @click="onDrop(index)">
-                        <div :class="discColor(color)">
-                        </div>
+                    <button class="flex justify-center column w-full m-0 p-0" v-for="(col, index) in gridDolumns" :key="index" @click="onDrop(index, color)">
+                        <div :class="discColor(color)"></div>
                     </button>
                 </div>
             </div>
         </div>
     </div>
   </template>
-  &
+
 <script setup lang="ts">
     import { ref, Ref } from 'vue';
+    
 
     const props = defineProps({
         color: {
             type: String,
             required: false,
         },
+        grid: {
+            type: Array as () => string[][],
+            required: true,
+        },
     });
 
 
-    const grid: Ref<string[][]> = ref([
-        ["E", "E", "Y", "E", "fe", "E", "E"],
-        ["E", "E", "E", "E", "E", "Y", "E"],
-        ["E", "E", "E", "E", "E", "E", "E"],
-        ["E", "E", "E", "E", "E", "E", "E"],
-        ["E", "E", "E", "E", "E", "E", "E"],
-        ["E", "E", "E", "E", "E", "Y", "E"]
-    ]);
+    const gridDolumns: Ref<number[]> = ref(new Array(props.grid[0].length).fill(1));
+    const columns: Ref<number> = ref(props.grid[0].length);
+    const rows: Ref<number> = ref(props.grid.length);
 
-    const grid2: Ref<string[][]> = ref([
-        ["E", "E", "Y"],
-        ["E", "Y", "E"],
-        ["E", "E", "E"]
-    ]);
+    const emit = defineEmits(['drop-event'])
+    const colors: Ref<string[]> = ref(['yellow', 'red'])
 
-    const gridDolumns: Ref<number[]> = ref(new Array(grid.value[0].length).fill(1));
-    const columns: Ref<number> = ref(grid.value[0].length);
-    const rows: Ref<number> = ref(grid.value.length);
-
-    function onDrop(colIndex: number) {
-        console.log(colIndex)
+    function dropEvent(color: string, rowIndex: number, colIndex: number) {
+        emit('drop-event', { color: color, row: rowIndex, col: colIndex})
     }
+
+
+    function onDrop(colIndex: number, color: string) {
+        const column = props.grid.map(row => row[colIndex]);
+        const lastIndex = column.lastIndexOf('E');
+        if (lastIndex !== -1) {
+            dropEvent(color, lastIndex, colIndex)
+        }
+    }
+    
     function discColor(color: string) {
         if(color == 'E') {
             return `disc`;
@@ -67,6 +69,7 @@
 <style scoped>
 * {
     box-sizing: border-box;
+    transition: all 0.5s;
 }
 
 .c-grid, .c-cells {
@@ -77,7 +80,7 @@
     width: 74% !important;
     height: 74% !important;
     animation: Drop calc(.20s * var(--row)) both;
-  }
+}
 .c-grid {
     display: grid;
     grid-template-columns: repeat(v-bind('columns'), 1fr);
@@ -131,6 +134,12 @@
 .selector .disc {
     margin: 10px;
     transform: scale(2);
+}
+
+@keyframes Rise {
+    from {
+        transform: translateY(100%);
+    }
 }
 
 @keyframes Drop {

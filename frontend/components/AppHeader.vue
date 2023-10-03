@@ -1,9 +1,9 @@
 <template>
     <header>
         <nav>
-          <div class="navbar">
-            <div class="navbar-start">
-              <a class="btn btn-ghost normal-case text-xl">Projet puissance 4 🔥</a>
+          <div class="navbar flex justify-center">
+            <div>
+              <a class="btn btn-ghost normal-case text-xl">Puissance 4 🔥</a>
             </div>
           </div>
         </nav>

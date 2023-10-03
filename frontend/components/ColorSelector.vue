@@ -27,7 +27,7 @@ import { ref, Ref } from 'vue';
 const props = defineProps({
     playersList: {
         type: Array as () => Players[],
-        required: true,
+        required: false,
     },
 });
 

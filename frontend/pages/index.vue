@@ -2,9 +2,9 @@
     <div>
         <NameSelector />
         <ColorSelector :playersList="players" />
-        <PlayScreen :color="playerColor" :name="playerName" />
-        <VictoryScreen :color="playerColor" :name="playerName" />
-        <Grid :color="playerColor" />
+        <PlayScreen :color="currentPlayer?.color" :name="currentPlayer?.name" />
+        <VictoryScreen :color="currentPlayer?.color" :name="currentPlayer?.name" />
+        <Grid :color="currentPlayer?.color" :grid="grid" @drop-event="gameEvent" />
     </div>
 </template>
 
@@ -17,31 +17,47 @@ interface Players {
     color: string;
 }
 
-type PlayersList = Players[];
+const grid: Ref<string[][]> = ref([
+    ["E", "E", "Y", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "Y", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "R", "E"]
+]);
 
-const players: Ref<PlayersList> = ref([]);
+const players: Ref<Players[] | undefined> =  ref()
+const gameSelection: Ref<boolean> = ref(false);
+const colorSelection: Ref<boolean> = ref(false);
+const currentPlayer: Ref<Players | undefined> = ref();
 
 players.value = [
     {id: 1, name:'Marc', color: 'Y'},
     {id: 2, name:'Marco', color: 'R'}
 ]
-
-const playerColor: Ref<string | undefined> = ref(players.value[1].color);
-const playerName: Ref<string | undefined> = ref(players.value[1].name);
-
-// function updatePlayersList(selectedNames: string[]) {
-//     // Suppose you have a function to fetch player colors based on selected names
-//     // For example, a function called fetchPlayerColors(selectedNames: string[]): Player[]
-//     players.value = fetchPlayerColors(selectedNames);
-// }
+currentPlayer.value = players.value[0]
 
 
-function fetchPlayerColors(selectedNames: string[]): Players[] {
-    return selectedNames.map((name, index) => ({
-        id: index + 1,
-        name: name,
-        color: index % 2 === 0 ? 'yellow' : 'red'
-    }));
+function playTurn(hasPlayedPlayer: Players) {
+    if (gameSelection.value) {
+        return;
+    }
+    if (colorSelection.value) {
+        return;
+    }
+    if(players && players.value) {
+        return currentPlayer.value = players.value.find(p => p.color !== hasPlayedPlayer.color);
+    }
+}
+
+function gameEvent(stateOfPlay: {color: string, row: number, col: number}) {
+    console.log('stateOfPlay: ', stateOfPlay)
+    grid.value[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
+    if(currentPlayer && currentPlayer.value) {
+        currentPlayer.value = playTurn(currentPlayer.value)
+        
+    }
+
 }
 
 </script>
