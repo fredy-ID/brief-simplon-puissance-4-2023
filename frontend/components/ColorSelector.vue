@@ -1,20 +1,23 @@
 <template>
-    <div class="flex flex-col">
-        <div class="flex flex-row gap-x-4">
-            <div class="players" v-for="player in playersList" :key="player.id">
-                <div class="player flex items-center gap-1">
-                    {{ player.name }}
-                    <div v-if="player.color" :class="discColor(player.color)"></div>
+    <div class="hero bg-base-200">
+        <div class="hero-content text-center">
+            <div class="flex flex-col">
+                <div class="flex flex-row gap-x-4">
+                    <div class="players" v-for="player in playersList" :key="player.id">
+                        <div class="player flex items-center gap-1">
+                            {{ player.name }}
+                            <div v-if="player.color" :class="discColor(player.color)"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <h3 class="text-3xl">Selectionnez une couleur</h3>
+                    <div class="selector flex gap-2 mt-3">
+                        <button v-for="color in colors" :key="color" :class="discColor(color)" @click="selectColor(color)"></button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="mt-2">
-            <h3 class="text-3xl">Selectionnez une couleur</h3>
-            <div class="selector flex gap-2 mt-3">
-                <button v-for="color in colors" :key="color" :class="discColor(color)" @click="selectColor(color)"></button>
-            </div>
-        </div>
-        
     </div>
 </template>
 

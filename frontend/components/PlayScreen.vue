@@ -1,6 +1,8 @@
 <template>
-    <div>
-        <h3 v-if="color && name" class="text-3xl flex items-center gap-3">Au tour de {{ name }} <div :class="discColor(color)"></div> de jouer</h3>
+    <div class="hero bg-base-200">
+        <div class="hero-content text-center">
+            <h3 v-if="color && name" class="text-3xl flex items-center gap-3">Au tour de {{ name }} <div :class="discColor(color)"></div> de jouer</h3>
+        </div>
     </div>
 </template>
 

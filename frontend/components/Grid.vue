@@ -1,22 +1,24 @@
 <template>
-    <div>
-      <div class="relative board h-96 w-96 my-20">
-        <div class="absolute c-grid flex h-full w-full"></div>
-        <div class="h-full w-full flex flex-col c-cells">
-            <div v-for="(col, rowIndex) in grid" :key="rowIndex" class="flex flew-row grow">
-                <div v-for="(cell, colIndex) in col" :key="colIndex" class="cell grow h-full w-full flex items-center justify-center relative">
-                    <div :class="discColor(cell)" :style="{'--row': rowIndex}">
+    <div class="hero bg-base-200">
+        <div class="hero-content text-center">
+            <div class="relative board h-96 w-96 my-20">
+                <div class="absolute c-grid flex h-full w-full"></div>
+                <div class="h-full w-full flex flex-col c-cells">
+                    <div v-for="(col, rowIndex) in grid" :key="rowIndex" class="flex flew-row grow">
+                        <div v-for="(cell, colIndex) in col" :key="colIndex" class="cell grow h-full w-full flex items-center justify-center relative">
+                            <div :class="discColor(cell)" :style="{'--row': rowIndex}">
+                            </div>
+                        </div>
                     </div>
+                </div>
+                <div v-if="color && color!='E'" class="columns absolute flex items-end">
+                    <button class="flex justify-center column w-full m-0 p-0" v-for="(col, index) in gridDolumns" :key="index" @click="onDrop(index)">
+                        <div :class="discColor(color)">
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>
-        <div v-if="color && color!='E'" class="columns absolute flex items-end">
-            <button class="flex justify-center column w-full m-0 p-0" v-for="(col, index) in gridDolumns" :key="index" @click="onDrop(index)">
-                <div :class="discColor(color)">
-                </div>
-            </button>
-        </div>
-      </div>
     </div>
   </template>
   &
