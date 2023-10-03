@@ -44,6 +44,9 @@ const colors: Ref<string[]> = ref(['yellow', 'red'])
 
 
 function discColor(color: string) {
+    if(color == 'E') {
+        return 'disc';
+    }
     return `disc disc-${color == "yellow" ? "yellow" : "red"}`;
 }
 
@@ -54,7 +57,7 @@ function selectColor(color: string) {
 </script>
 
 <style scoped>
-.disc{
+.disc-yellow{
     background-color: #f6db38;
     box-shadow: inset 0 0 0 3px #97851d;
     border: solid 3px #f6db38;
