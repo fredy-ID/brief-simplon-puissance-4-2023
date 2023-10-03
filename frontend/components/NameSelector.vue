@@ -14,7 +14,7 @@
           </label>
           <form @submit="selectName">
             <input v-model="playerName" type="text" placeholder="Nom du joueur" id="playerName" name="name" class="input input-bordered w-full max-w-xs" required/>
-            <button :disabled="active_btn ? false : true" block type="submit" class="btn btn-neutral">Choisir</button>
+            <button type="submit" class="btn btn-neutral">Choisir</button>
           </form>
         </div>
         <div>
@@ -31,7 +31,6 @@ import { ref, Ref } from 'vue';
 
 const error: Ref<string | undefined> = ref();
 const playerName: Ref<string | undefined> = ref();
-const active_btn: Ref<boolean> = ref(false);
   
 async function selectName(e: Event): Promise<void> {
     e.preventDefault();

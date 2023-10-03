@@ -2,7 +2,9 @@
     <div>
         <NameSelector />
         <ColorSelector :playersList="players" />
-        <Grid />
+        <PlayScreen :color="playerColor" :name="playerName" />
+        <VictoryScreen :color="playerColor" :name="playerName" />
+        <Grid :color="playerColor" />
     </div>
 </template>
 
@@ -19,16 +21,19 @@ type PlayersList = Players[];
 
 const players: Ref<PlayersList> = ref([]);
 
+players.value = [
+    {id: 1, name:'Marc', color: 'Y'},
+    {id: 2, name:'Marco', color: 'R'}
+]
+
+const playerColor: Ref<string | undefined> = ref(players.value[1].color);
+const playerName: Ref<string | undefined> = ref(players.value[1].name);
+
 // function updatePlayersList(selectedNames: string[]) {
 //     // Suppose you have a function to fetch player colors based on selected names
 //     // For example, a function called fetchPlayerColors(selectedNames: string[]): Player[]
 //     players.value = fetchPlayerColors(selectedNames);
 // }
-
-players.value = [
-    {id: 1, name:'Marc', color: 'yellow'},
-    {id: 2, name:'Marco', color: 'red'}
-]
 
 
 function fetchPlayerColors(selectedNames: string[]): Players[] {
