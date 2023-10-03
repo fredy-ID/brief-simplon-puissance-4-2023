@@ -1,16 +1,33 @@
 <template>
-    <div class="flex flex-row gap-x-4">
-        <div class="players" v-for="player in playersList" :key="player.id">
-            <div class="player flex items-center gap-1">
-                {{ player.name }}
-                <div v-if="player.color" :class="discColor(player.color)"></div>
+    <div class="flex flex-col">
+        <div class="flex flex-row gap-x-4">
+            <div class="players" v-for="player in playersList" :key="player.id">
+                <div class="player flex items-center gap-1">
+                    {{ player.name }}
+                    <div v-if="player.color" :class="discColor(player.color)"></div>
+                </div>
             </div>
         </div>
+        <div class="mt-2">
+            <h3 class="text-3xl">Selectionnez une couleur</h3>
+            <div class="selector flex gap-2 mt-3">
+                <button v-for="color in colors" :key="color" :class="discColor(color)" @click="selectColor(color)"></button>
+            </div>
+        </div>
+        
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, Ref } from 'vue';
+
+const props = defineProps({
+    playersList: {
+        type: Array as () => Players[],
+        required: true,
+    },
+});
+
 
 interface Players {
     id: number;
@@ -22,16 +39,18 @@ interface PlayerColor {
     color: string;
 }
 
-const props = defineProps({
-    playersList: {
-        type: Array as () => Players[],
-        required: true,
-    },
-});
+const emit = defineEmits(['color-choice-event'])
+const colors: Ref<string[]> = ref(['yellow', 'red'])
+
 
 function discColor(color: string) {
     return `disc disc-${color == "yellow" ? "yellow" : "red"}`;
 }
+
+function selectColor(color: string) {
+    emit('color-choice-event', { color: color })
+}
+
 </script>
 
 <style scoped>
@@ -53,5 +72,10 @@ function discColor(color: string) {
     width: 20px;
     height: 20px;
     border-radius: 100%;
+}
+
+.selector .disc {
+    margin: 10px;
+    transform: scale(2);
 }
 </style>

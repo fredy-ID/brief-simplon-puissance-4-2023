@@ -2,6 +2,7 @@
     <div>
         <NameSelector />
         <ColorSelector :playersList="players" />
+        <Grid />
     </div>
 </template>
 
