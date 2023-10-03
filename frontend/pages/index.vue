@@ -1,9 +1,9 @@
 <template>
     <div>
-        <NameSelector />
-        <ColorSelector :playersList="players" />
+        <NameSelector v-if="gameSelection" />
+        <ColorSelector v-if="colorSelection" :playersList="players" />
         <PlayScreen :color="currentPlayer?.color" :name="currentPlayer?.name" />
-        <VictoryScreen :color="currentPlayer?.color" :name="currentPlayer?.name" />
+        <VictoryScreen v-if="gameOver" :color="winner?.color" :name="winner?.name" @start-new-game-event="restartGame"/>
         <Grid :color="currentPlayer?.color" :grid="grid" @drop-event="gameEvent" />
     </div>
 </template>
@@ -17,6 +17,15 @@ interface Players {
     color: string;
 }
 
+const board: Ref<string[][]> = ref([
+    ["E", "E", "Y", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "Y", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "R", "E"]
+]);
+
 const grid: Ref<string[][]> = ref([
     ["E", "E", "Y", "E", "E", "E", "E"],
     ["E", "E", "E", "E", "E", "Y", "E"],
@@ -29,7 +38,9 @@ const grid: Ref<string[][]> = ref([
 const players: Ref<Players[] | undefined> =  ref()
 const gameSelection: Ref<boolean> = ref(false);
 const colorSelection: Ref<boolean> = ref(false);
+const gameOver: Ref<boolean> = ref(false);
 const currentPlayer: Ref<Players | undefined> = ref();
+const winner: Ref<Players | undefined> = ref();
 
 players.value = [
     {id: 1, name:'Marc', color: 'Y'},
@@ -37,6 +48,20 @@ players.value = [
 ]
 currentPlayer.value = players.value[0]
 
+function gameEvent(stateOfPlay: { color: string; row: number; col: number }) {
+    console.log('stateOfPlay: ', stateOfPlay);
+    grid.value[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
+    if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
+        gameOver.value = true;
+        winner.value = currentPlayer.value;
+        currentPlayer.value = undefined;
+        console.log(`Le joueur ${stateOfPlay.color} a gagné !`);
+    } else {
+        if (currentPlayer && currentPlayer.value) {
+            currentPlayer.value = hasPlayed(currentPlayer.value);
+        }
+    }
+}
 
 function hasPlayed(hasPlayedPlayer: Players) {
     if (gameSelection.value) {
@@ -47,6 +72,21 @@ function hasPlayed(hasPlayedPlayer: Players) {
     }
     if(players && players.value) {
         return players.value.find(p => p.color !== hasPlayedPlayer.color);
+    }
+}
+
+function restartGame() {
+    console.log("Starting new game...");
+    // copie profonde (deep copy) des tableaux à l'intérieur de board.value avant de les assigner à grid.value
+    // Pour éviter que la Référence en mémoire modifie la valeur de board.value
+    grid.value = JSON.parse(JSON.stringify(board.value));
+
+    console.log('board: ', board.value)
+
+    if(players && players.value) {
+        gameOver.value = false;
+        currentPlayer.value = players.value.find(p => p.color !== winner?.value?.color);
+        winner.value = undefined;
     }
 }
 
@@ -104,18 +144,6 @@ function checkVictory(grid: string[][], row: number, col: number, player: string
     }
 
     return false;
-}
-
-function gameEvent(stateOfPlay: { color: string; row: number; col: number }) {
-    console.log('stateOfPlay: ', stateOfPlay);
-    grid.value[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
-    if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
-        console.log(`Le joueur ${stateOfPlay.color} a gagné !`);
-    } else {
-        if (currentPlayer && currentPlayer.value) {
-            currentPlayer.value = hasPlayed(currentPlayer.value);
-        }
-    }
 }
 
 </script>

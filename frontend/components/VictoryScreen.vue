@@ -3,7 +3,7 @@
         <div class="hero-content text-center">
             <div class="flex justify-between ">
                 <h3 v-if="color && name" class="text-3xl flex items-center gap-3">Bravo {{ name }} <div :class="discColor(color)"></div> a gangé!</h3>
-                <button class="btn btn-neutral">Rejouer</button>
+                <button class="btn btn-neutral" @click="newGame()">Rejouer</button>
             </div>
         </div>
     </div>
@@ -21,6 +21,12 @@
             required: false,
         }
     });
+
+    const emit = defineEmits(['start-new-game-event'])
+
+    function newGame() {
+        emit('start-new-game-event')
+    }
 
     function discColor(color: string) {
         if(color == 'E') {
