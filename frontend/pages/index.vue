@@ -18,21 +18,21 @@ interface Players {
 }
 
 const board: Ref<string[][]> = ref([
-    ["E", "E", "Y", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "Y", "E"],
     ["E", "E", "E", "E", "E", "E", "E"],
     ["E", "E", "E", "E", "E", "E", "E"],
     ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "R", "E"]
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"]
 ]);
 
 const grid: Ref<string[][]> = ref([
-    ["E", "E", "Y", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "Y", "E"],
     ["E", "E", "E", "E", "E", "E", "E"],
     ["E", "E", "E", "E", "E", "E", "E"],
     ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "R", "E"]
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"]
 ]);
 
 const players: Ref<Players[] | undefined> =  ref()
