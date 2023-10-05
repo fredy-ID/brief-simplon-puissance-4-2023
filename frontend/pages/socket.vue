@@ -1,12 +1,12 @@
 <template>
   <div>
     <input placeholder="Room Number..." v-model="room" />
-    <button @click="joinRoom">Join Room</button>
+    <button @click="joinRoom" class="bg-green-900 hover:bg-green-800 text-white font-bold py-1 px-2 rounded-full">Join Room</button>
     <input placeholder="Message..." v-model="message" />
-    <button @click="sendMessage">Send Message</button>
+    <button @click="sendMessage"  class="bg-blue-900 hover:bg-blue-800 text-white font-bold py-1 px-2 rounded-full">Send Message</button>
     <div v-for="(msg, index) in messages" :key="index">
       <h1>Message:</h1>
-      {{ msg }}
+      <p class="">{{ msg }}</p>
     </div>
   </div>
 </template>
