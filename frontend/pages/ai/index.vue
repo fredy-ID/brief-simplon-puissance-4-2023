@@ -6,6 +6,9 @@
         <VictoryScreen v-if="gameOver" :color="winner?.color" :name="winner?.name" @start-new-game-event="restartGame"/>
         <PlayScreen :color="currentPlayer?.color" :name="currentPlayer?.name" />
         <Grid :color="currentPlayer?.color" :grid="grid" @drop-event="gameEvent" />
+        <div v-for="(row, index) in grid" :key="index">
+            {{ row }}
+        </div>
     </div>
 </template>
 
@@ -40,43 +43,99 @@ const players: Ref<Players[] | undefined> =  ref()
 const gameSelection: Ref<boolean> = ref(false);
 const colorSelection: Ref<boolean> = ref(false);
 const gameOver: Ref<boolean> = ref(false);
+const gameMode: Ref<string> = ref('pve');
 const currentPlayer: Ref<Players | undefined> = ref();
+const nextPlayer: Ref<Players | undefined> = ref();
 const winner: Ref<Players | undefined> = ref();
 
-players.value = [
-    {id: 1, name:'Marc', color: 'Y'},
-    {id: 2, name:'Marco', color: 'R'}
-]
-currentPlayer.value = players.value[0]
+const COLORS = {
+    YELLOW: 'Y',
+    RED: 'R',
+    PURPLE: 'P'
+} 
 
-function gameEvent(stateOfPlay: { color: string; row: number; col: number }) {
+players.value = [
+    {id: 1, name:'Marc', color: COLORS.YELLOW},
+    {id: 2, name:'Marco', color: COLORS.RED},
+    {id: 3, name:'AI', color: COLORS.PURPLE}
+]
+
+
+function gameEvent(stateOfPlay: { color: string; row: number; col: number }): void {
     console.log('stateOfPlay: ', stateOfPlay);
     grid.value[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
-    if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
-        gameOver.value = true;
-        winner.value = currentPlayer.value;
-        currentPlayer.value = undefined;
-        console.log(`Le joueur ${stateOfPlay.color} a gagné !`);
-    } else {
-        if (currentPlayer && currentPlayer.value) {
-            currentPlayer.value = hasPlayed(currentPlayer.value);
+    if(!isGameOver()) {
+        if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
+            gameOver.value = true;
+            winner.value = currentPlayer.value;
+            currentPlayer.value = undefined;
+            console.log(`Le joueur ${stateOfPlay.color} a gagné !`);
         }
+        else {
+            if (currentPlayer.value) {
+                const oldPlayer = currentPlayer.value;
+                currentPlayer.value = undefined;
+                nextPlayer.value = hasPlayed(oldPlayer);
+                if(nextPlayer.value?.color == COLORS.PURPLE){
+                    currentPlayer.value = nextPlayer.value
+                    setTimeout(() => selectAction(), 1000)
+                } else {
+                    currentPlayer.value = nextPlayer.value
+                }
+                console.log('new current player ', currentPlayer.value)
+            }
+        }
+    } else {
+        gameOver.value = true;
+        currentPlayer.value = undefined;
     }
+    
 }
 
-function hasPlayed(hasPlayedPlayer: Players) {
+function isGameOver(): boolean {
+    for (let col = 0; col < grid.value[0].length; col++) {
+        if (grid.value[0][col] === "E") {
+            return false;
+        }
+    }
+
+    gameOver.value = true;
+    console.log('Game Over!');
+
+    return true;
+}
+
+function hasPlayed(hasPlayedPlayer: Players): undefined | Players {
     if (gameSelection.value) {
         return;
     }
     if (colorSelection.value) {
         return;
     }
-    if(players && players.value) {
-        return players.value.find(p => p.color !== hasPlayedPlayer.color);
+    if(players.value) {
+        if(gameMode.value == 'pve') {
+            console.log('pve - hasPlayed ', hasPlayedPlayer)
+            if(hasPlayedPlayer.color === COLORS.PURPLE ) {
+                console.log('pve - next player', players.value.find(p => p.color == COLORS.YELLOW))
+                return players.value.find(p => p.color == COLORS.YELLOW)
+            } else {
+                console.log('pve - next player', players.value.find(p => p.color == COLORS.PURPLE))
+                return players.value.find(p => p.color == COLORS.PURPLE)
+            }
+        } else if(gameMode.value == 'pvp') {
+            console.log('pvp - hasPlayed ', hasPlayedPlayer)
+            if(hasPlayedPlayer.color === COLORS.RED ) {
+                console.log('pvp - next player', players.value.find(p => p.color == COLORS.YELLOW))
+                return players.value.find(p => p.color == COLORS.YELLOW)
+            } else {
+                console.log('pvp - next player', players.value.find(p => p.color == COLORS.RED))
+                return players.value.find(p => p.color == COLORS.RED)
+            }   
+        }
     }
 }
 
-function restartGame() {
+function restartGame(): void {
     console.log("Starting new game...");
     // copie profonde (deep copy) des tableaux à l'intérieur de board.value avant de les assigner à grid.value
     // Pour éviter que la Référence en mémoire modifie la valeur de board.value
@@ -84,9 +143,16 @@ function restartGame() {
 
     console.log('board: ', board.value)
 
-    if(players && players.value) {
+    if(players.value) {
+
+        if(gameMode.value == 'pvp') {
+            currentPlayer.value = players.value.find(p => p.color !== winner?.value?.color);
+        } else {
+            currentPlayer.value = players.value.find(p => p.color == COLORS.YELLOW)
+        }
+
         gameOver.value = false;
-        currentPlayer.value = players.value.find(p => p.color !== winner?.value?.color);
+        
         winner.value = undefined;
     }
 }
@@ -177,17 +243,50 @@ model.add(tf.layers.dense({ inputShape: inputShape, units: ACTIONS.length, activ
 // Compilez le modèle avec une fonction de perte appropriée et un optimiseur
 model.compile({ loss: 'meanSquaredError', optimizer: 'adam' });
 
+function randomIntFromInterval(min: number, max: number) { // min and max included 
+  return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+// function selectAction() {
+//     const colIndex = ACTIONS[randomIntFromInterval(0, grid.value[0].length - 1)]
+//     console.log(colIndex)
+//     const column = grid.value.map(row => row[colIndex]);
+//     const row = column.lastIndexOf('E');
+//     grid.value[row][colIndex] = 'P';
+//     console.log(grid.value)
+// }
+
+// selectAction();
 
 
+function selectAction(): void {
+    if(players.value){
+        currentPlayer.value = players.value[2]
+        console.log('currentPlayer.value', currentPlayer.value)
+        const colIndex = ACTIONS[randomIntFromInterval(0, grid.value[0].length - 1)];
+        console.log("Colonne choisie au hasard : " + colIndex);
+        
+        // Trouver l'index du dernier 'E' dans la colonne sélectionnée
+        let rowIndex = -1;
+        for (let i = grid.value.length - 1; i >= 0; i--) {
+            if (grid.value[i][colIndex] === 'E') {
+                rowIndex = i;
+                break;
+            }
+        }
+        
+        // Mettre 'P' dans la dernière case 'E' de la colonne sélectionnée
+        if (rowIndex !== -1) {
+            gameEvent({color: COLORS.PURPLE, row: rowIndex, col: colIndex})
+            console.log('reward : ', 1)
+        } else {
+            selectAction()
+            console.log('reward : ', -1)
+        }
+    }
+}
 
-
-
-
-
-
-
-
-
+selectAction();
 
 
 
@@ -214,7 +313,7 @@ model.compile({ loss: 'meanSquaredError', optimizer: 'adam' });
 //     // Entraînez votre modèle avec les nouvelles valeurs Q (utilisez la méthode model.fit() de TensorFlow.js ou l'équivalent dans votre bibliothèque)
 // }
 
-// // Fonction pour jouer un épisode du jeu
+// Fonction pour jouer un épisode du jeu
 // function playEpisode(epsilon: number): void {
 //     // Réinitialisez votre environnement (grille) ici
 
