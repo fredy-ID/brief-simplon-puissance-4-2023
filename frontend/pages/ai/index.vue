@@ -65,13 +65,13 @@ function gameEvent(stateOfPlay: { color: string; row: number; col: number }): vo
     console.log('stateOfPlay: ', stateOfPlay);
     grid.value[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
     if(!isGameOver()) {
-        // if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
-        //     gameOver.value = true;
-        //     winner.value = currentPlayer.value;
-        //     currentPlayer.value = undefined;
-        //     console.log(`Le joueur ${stateOfPlay.color} a gagné !`);
-        // }
-        // else {
+        if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
+            gameOver.value = true;
+            winner.value = currentPlayer.value;
+            currentPlayer.value = undefined;
+            console.log(`Le joueur ${stateOfPlay.color} a gagné !`);
+        }
+        else {
             if (currentPlayer.value) {
                 const oldPlayer = currentPlayer.value;
                 currentPlayer.value = undefined;
@@ -84,7 +84,7 @@ function gameEvent(stateOfPlay: { color: string; row: number; col: number }): vo
                 }
                 console.log('new current player ', currentPlayer.value)
             }
-        // }
+        }
     } else {
         gameOver.value = true;
         currentPlayer.value = undefined;
