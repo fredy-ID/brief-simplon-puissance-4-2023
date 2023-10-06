@@ -22,6 +22,8 @@
     function discColor(color: string) {
         if(color == 'E') {
             return `disc`;
+        } else if (color == 'P') {
+            return `disc disc-${color == "P" ? "purple" : "red"}`;
         }
         return `disc disc-${color == "Y" ? "yellow" : "red"}`;
     }
@@ -40,6 +42,16 @@
     box-shadow: inset 0 0 0 3px #97851d;
     border: solid 3px #f6db38;
     outline: solid 1px #97851d;
+    width: 20px;
+    height: 20px;
+    border-radius: 100%;
+}
+
+.disc-purple{
+    background-color: #91008f;
+    box-shadow: inset 0 0 0 3px #5e005d;
+    border: solid 3px #91008f;
+    outline: solid 1px #5e005d;
     width: 20px;
     height: 20px;
     border-radius: 100%;

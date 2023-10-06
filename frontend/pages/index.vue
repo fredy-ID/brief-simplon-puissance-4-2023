@@ -50,7 +50,10 @@ currentPlayer.value = players.value[0]
 
 function gameEvent(stateOfPlay: { color: string; row: number; col: number }) {
     console.log('stateOfPlay: ', stateOfPlay);
+
+    // TODO : Envoyer changement etat grid en ligne
     grid.value[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
+
     if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
         gameOver.value = true;
         winner.value = currentPlayer.value;

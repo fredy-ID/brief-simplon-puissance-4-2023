@@ -4,16 +4,17 @@
             <div class="relative board h-96 w-96 my-20">
                 <div class="absolute c-grid flex h-full w-full"></div>
                 <div class="h-full w-full flex flex-col c-cells">
-                    <div v-for="(col, rowIndex) in grid" :key="rowIndex" class="flex flew-row grow">
-                        <div v-for="(cell, colIndex) in col" :key="colIndex" class="cell grow h-full w-full flex items-center justify-center relative" :data-row="rowIndex" :data-col="colIndex">
+                    <div v-for="(row, rowIndex) in grid" :key="rowIndex" class="flex flew-row grow">
+                        <div v-for="(cell, colIndex) in row" :key="colIndex" class="cell grow h-full w-full flex items-center justify-center relative" :data-row="rowIndex" :data-col="colIndex">
                             <div :class="discColor(cell)" :style="{'--row': rowIndex}">
+                                <!-- {{ cell }} -->
                             </div>
                         </div>
                     </div>
                 </div>
-                <div v-if="color && color!='E'" class="columns absolute flex items-end">
-                    <button class="flex justify-center column w-full m-0 p-0" v-for="(col, index) in gridDolumns" :key="index" @click="onDrop(index, color)">
-                        <div :class="discColor(color)"></div>
+                <div v-if="colorProps && colorProps != 'P'" class="columns absolute flex items-end">
+                    <button class="flex justify-center column w-full m-0 p-0" v-for="(col, index) in gridDolumns" :key="index" @click="onDrop(index, colorProps)">
+                        <div :class="discColor(colorProps)"></div>
                     </button>
                 </div>
             </div>
@@ -22,9 +23,8 @@
   </template>
 
 <script setup lang="ts">
-    import { ref, Ref } from 'vue';
+    import { ref, Ref, watch } from 'vue';
     
-
     const props = defineProps({
         color: {
             type: String,
@@ -36,6 +36,17 @@
         },
     });
 
+    // watch works directly on a ref
+    
+
+    const colorProps: Ref<string | undefined> = ref(props.color);
+
+    watch(() => ({ color: props.color }), (newColor, oldColor) => {
+        colorProps.value = newColor.color;
+    })
+
+    console.log('gridPprops', props.grid)
+    console.log('color ', props.color)
 
     const gridDolumns: Ref<number[]> = ref(new Array(props.grid[0].length).fill(1));
     const columns: Ref<number> = ref(props.grid[0].length);
@@ -50,22 +61,28 @@
 
 
     function onDrop(colIndex: number, color: string) {
+        colorProps.value = undefined;
         const column = props.grid.map(row => row[colIndex]);
-        const lastIndex = column.lastIndexOf('E');
-        if (lastIndex !== -1) {
-            dropEvent(color, lastIndex, colIndex)
+        const rowIndex = column.lastIndexOf('E');
+        if (rowIndex !== -1) {
+            dropEvent(color, rowIndex, colIndex);
         }
+        colorProps.value = props.color;
     }
     
     function discColor(color: string) {
         if(color == 'E') {
             return `disc`;
+        } else if (color == 'P') {
+            return `disc disc-purple`;
         }
-        return `disc disc-${color == "Y" ? "yellow" : "red"}`;
+        else {
+            return `disc disc-${color == "Y" ? "yellow" : "red"}`;
+        }
     }
 
 </script>
-  
+
 <style scoped>
 * {
     box-sizing: border-box;
@@ -119,6 +136,14 @@
     box-shadow: inset 0 0 0 3px #97851d;
     border: solid 3px #f6db38;
     outline: solid 1px #97851d;
+    position: absolute;
+}
+
+.disc-purple{
+    background-color: #91008f;
+    box-shadow: inset 0 0 0 3px #5e005d;
+    border: solid 3px #91008f;
+    outline: solid 1px #5e005d;
     position: absolute;
 }
 
