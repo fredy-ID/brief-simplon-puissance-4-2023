@@ -86,13 +86,14 @@ function gameEvent(stateOfPlay: { color: string; row: number; col: number }, gri
         game = gridState;
     }
     game[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
-    if(!isGameOver()) {
+    gameOver.value = isGameOver();
+    if(!gameOver.value) {
         if (checkVictory(game, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
             gameOver.value = true;
             winner.value = currentPlayer.value;
             currentPlayer.value = undefined;
 
-            return {game: game, reward: WIN_REWARD }
+            return {game: game, reward: WIN_REWARD}
         }
         else {
             if (currentPlayer.value) {
@@ -371,7 +372,6 @@ async function selectAction(gameType: string = 'normal', gridState: string[][] |
     } else {
         return {action: null, gameState: {game: game, reward: 0}};
     }
-    
 }
 
 // onMounted(() => {
@@ -416,6 +416,9 @@ async function train(grid: string[][]) {
             if(stepActionResult.action == null) {
                 return;
             }
+            // if(stepActionResult.draw) {
+            //     return;
+            // }
             
             let act: number = stepActionResult.action
             reward = stepActionResult.gameState.reward
