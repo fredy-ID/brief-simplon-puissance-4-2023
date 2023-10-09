@@ -45,9 +45,6 @@
         colorProps.value = newColor.color;
     })
 
-    console.log('gridPprops', props.grid)
-    console.log('color ', props.color)
-
     const gridDolumns: Ref<number[]> = ref(new Array(props.grid[0].length).fill(1));
     const columns: Ref<number> = ref(props.grid[0].length);
     const rows: Ref<number> = ref(props.grid.length);

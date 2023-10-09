@@ -48,7 +48,7 @@ const players: Ref<Players[] | undefined> =  ref()
 const gameSelection: Ref<boolean> = ref(false);
 const colorSelection: Ref<boolean> = ref(false);
 const gameOver: Ref<boolean> = ref(false);
-const gameMode: Ref<string> = ref('pve');
+const gameMode: Ref<string> = ref('eve');
 const currentPlayer: Ref<Players | undefined> = ref();
 const nextPlayer: Ref<Players | undefined> = ref();
 const winner: Ref<Players | undefined> = ref();
@@ -59,6 +59,12 @@ const COLORS = {
     PURPLE: 'P'
 } 
 
+const trainingAIPlayers = [
+    {id: 1, name:'AI_1', color: COLORS.PURPLE},
+    {id: 2, name:'AI_2', color: COLORS.YELLOW},
+]
+
+
 players.value = [
     {id: 1, name:'Marc', color: COLORS.YELLOW},
     {id: 2, name:'Marco', color: COLORS.RED},
@@ -67,14 +73,14 @@ players.value = [
 
 const WIN_REWARD = 6;
 const DRAW_REWARD = 12;
-const NORMAL_REWARD = 1;
+const NORMAL_REWARD = 0.1;
 const LOSE_REWARD = -6;
-const OUT_OF_BOUND = -1;
+const OUT_OF_BOUND = -0.1;
 const STEP_REWARD = 0.1;
 
 
 function gameEvent(stateOfPlay: { color: string; row: number; col: number }, gridState: string[][] | null = null): {game: string[][], reward: number} {
-    console.log('stateOfPlay: ', stateOfPlay);
+
     let game = grid.value
     if(gridState !== null) {
         game = gridState;
@@ -85,7 +91,6 @@ function gameEvent(stateOfPlay: { color: string; row: number; col: number }, gri
             gameOver.value = true;
             winner.value = currentPlayer.value;
             currentPlayer.value = undefined;
-            console.log(`Le joueur ${stateOfPlay.color} a gagné !`);
 
             return {game: game, reward: WIN_REWARD }
         }
@@ -96,17 +101,9 @@ function gameEvent(stateOfPlay: { color: string; row: number; col: number }, gri
                 nextPlayer.value = hasPlayed(oldPlayer);
                 if(nextPlayer.value?.color == COLORS.PURPLE){
                     currentPlayer.value = nextPlayer.value
-                    if(gridState !== null) {
-                        // selectAction()
-                        setTimeout(() => selectAction(), 1000)
-                    }else 
-                    {
-                        setTimeout(() => selectAction(), 1000)
-                    }
                 } else {
                     currentPlayer.value = nextPlayer.value
                 }
-                console.log('new current player ', currentPlayer.value)
             }
             return {game: game, reward: NORMAL_REWARD }
         }
@@ -114,7 +111,12 @@ function gameEvent(stateOfPlay: { color: string; row: number; col: number }, gri
         gameOver.value = true;
         currentPlayer.value = undefined;
 
+        if(gameMode.value == 'eve') {
+            restartGame()
+        }
+
         return {game: game, reward: DRAW_REWARD }
+
     }
     
 }
@@ -127,7 +129,6 @@ function isGameOver(): boolean {
     }
 
     gameOver.value = true;
-    console.log('Game Over!');
 
     return true;
 }
@@ -141,21 +142,15 @@ function hasPlayed(hasPlayedPlayer: Players): undefined | Players {
     }
     if(players.value) {
         if(gameMode.value == 'pve') {
-            console.log('pve - hasPlayed ', hasPlayedPlayer)
             if(hasPlayedPlayer.color === COLORS.PURPLE ) {
-                console.log('pve - next player', players.value.find(p => p.color == COLORS.YELLOW))
                 return players.value.find(p => p.color == COLORS.YELLOW)
             } else {
-                console.log('pve - next player', players.value.find(p => p.color == COLORS.PURPLE))
                 return players.value.find(p => p.color == COLORS.PURPLE)
             }
         } else if(gameMode.value == 'pvp') {
-            console.log('pvp - hasPlayed ', hasPlayedPlayer)
             if(hasPlayedPlayer.color === COLORS.RED ) {
-                console.log('pvp - next player', players.value.find(p => p.color == COLORS.YELLOW))
                 return players.value.find(p => p.color == COLORS.YELLOW)
             } else {
-                console.log('pvp - next player', players.value.find(p => p.color == COLORS.RED))
                 return players.value.find(p => p.color == COLORS.RED)
             }   
         }
@@ -163,17 +158,17 @@ function hasPlayed(hasPlayedPlayer: Players): undefined | Players {
 }
 
 function restartGame(): void {
-    console.log("Starting new game...");
     // copie profonde (deep copy) des tableaux à l'intérieur de board.value avant de les assigner à grid.value
     // Pour éviter que la Référence en mémoire modifie la valeur de board.value
     grid.value = JSON.parse(JSON.stringify(board.value));
 
-    console.log('board: ', board.value)
 
     if(players.value) {
 
         if(gameMode.value == 'pvp') {
             currentPlayer.value = players.value.find(p => p.color !== winner?.value?.color);
+        } else if(gameMode.value == 'pvp') {
+            currentPlayer.value = players.value.find(p => p.name !== winner?.value?.name && p.color == COLORS.PURPLE);
         } else {
             currentPlayer.value = players.value.find(p => p.color == COLORS.YELLOW)
         }
@@ -297,11 +292,22 @@ function grid_tensor(grid: string[][]): tf.Tensor {
     const encodedGrid = grid.map(row => row.map(cell => (cell === 'E' ? 0 : cell === 'Y' ? 1 : cell === 'R' ? 1 : 2)));
     // const inputTensor = tf.tensor(encodedGrid, [1, encodedGrid.length * encodedGrid[0].length]);
     const flattenedGrid = encodedGrid.flat();
-    console.log('flattenedGrid', [flattenedGrid])
-    const inputTensor = tf.tensor([flattenedGrid]);
-    // const inputTensor = tf.tensor([flattenedGrid], [grid[0].length, 42]);
+
+    let inputTensor = tf.tensor2d(flattenedGrid, [1, grid.length * grid[0].length]);
+
+    // const inputTensor = tf.tensor([flattenedGrid]);
     return  inputTensor
 
+}
+
+
+function stateLinear(state: string[][]): number[] {
+
+    const encodedGrid = state.map(row => row.map(cell => (cell === 'E' ? 0 : cell === 'Y' ? 1 : cell === 'R' ? 1 : 2)));
+    // const inputTensor = tf.tensor(encodedGrid, [1, encodedGrid.length * encodedGrid[0].length]);
+    const flattenedGrid = encodedGrid.flat();
+
+    return flattenedGrid
 }
 
 
@@ -313,7 +319,6 @@ async function action(state: string[][], epsilon: number): Promise<number> {
         act = ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
         return act
     } else {
-        console.log('st_tensor', st_tensor)
         const result = model.predict(st_tensor) as tf.Tensor;
         const argMax = result.argMax(1)
         const buffer = await argMax.buffer();
@@ -342,9 +347,7 @@ async function selectAction(gameType: string = 'normal', gridState: string[][] |
             player = currentPlayer.value 
         }
         currentPlayer.value = player
-        console.log('currentPlayer.value', currentPlayer.value)
         const colIndex = await action(game, epsilon)
-        console.log("Colonne choisie au hasard : " + colIndex);
         
         // Trouver l'index du dernier 'E' dans la colonne sélectionnée
         let rowIndex = -1;
@@ -360,11 +363,9 @@ async function selectAction(gameType: string = 'normal', gridState: string[][] |
         // Mettre 'P' dans la dernière case 'E' de la colonne sélectionnée
         if (rowIndex !== -1) {
             gameState = gameEvent({color: COLORS.PURPLE, row: rowIndex, col: colIndex}, gridState)
-            console.log('reward : ', 0)
             return {action: colIndex, gameState: gameState};
         } else {
             // selectAction()
-            console.log('reward : ', -1)
             return {action: colIndex, gameState: {game: game, reward: -1}};
         }
     } else {
@@ -373,9 +374,9 @@ async function selectAction(gameType: string = 'normal', gridState: string[][] |
     
 }
 
-onMounted(() => {
-    let rwd = selectAction();
-});
+// onMounted(() => {
+//     let rwd = selectAction();
+// });
 
 async function stepAction(grid: string[][], epsilon: number): Promise<{action: null | number, gameState: {game: string[][], reward: number}}> {
     const reward = await selectAction('train', grid, epsilon);
@@ -394,29 +395,31 @@ async function train(grid: string[][]) {
 
     let eps = 1.0;
     // Used to store the experiences
-    let states: tf.Tensor[] = [];
+    let states: number[][] = [];
     let rewards: number[][] = [];
     let reward_mean: number[] = [];
-    let next_states: tf.Tensor[] = [];
+    let next_states: number[][] = [];
     let actions: number[][] = [];
 
     // Get the current state of the lidar
-    let st: tf.Tensor = grid_tensor(grid);
-    let st2: tf.Tensor;
+    let st: number[] = stateLinear(grid);
+    let st2: number[];
 
-    for (let epi=0; epi < 150; epi++){
+    for (let epi=0; epi < 15; epi++){
         let reward: number = 0;
         let step: number = 0;
-        while (step < 400){
+        while (step < 1) {
+            
             // pick an action
             // let act = pickAction(st, eps);
             let stepActionResult = await stepAction(grid, eps)
             if(stepActionResult.action == null) {
                 return;
             }
+            
             let act: number = stepActionResult.action
             reward = stepActionResult.gameState.reward
-            st2 = grid_tensor(stepActionResult.gameState.game)
+            st2 = stateLinear(stepActionResult.gameState.game)
 
             let mask: number[] = Array.from({ length: grid[0].length }, (_, index) => 0);
             mask[act] = 1;
@@ -437,6 +440,9 @@ async function train(grid: string[][]) {
                 actions = actions.slice(1, actions.length);
             }
 
+            console.warn('______________________')
+            console.log('next_states', next_states)
+
             st = st2;
             step += 1;
         }
@@ -444,10 +450,7 @@ async function train(grid: string[][]) {
         eps = Math.max(0.1, eps*0.99);
 
         // Train model every 5 episodes
-        if (epi % 5 == 0){
-            console.log("---------------");
-            console.log("rewards mean", mean(reward_mean));
-            console.log("episode", epi);
+        if (epi % 1 == 0){
             await train_model(states, actions, rewards, next_states);
             await tf.nextFrame();
         }
@@ -455,29 +458,35 @@ async function train(grid: string[][]) {
 
 };
 
-    // Train the model
-function train_model(states: any, actions:any, rewards:any, next_states:any){
+async function findQTarget(tf_next_states: any, tf_rewards: any, size: any) {
+
+    let Q_stp1 = model.predict(tf_next_states);
+    const buffer = await Q_stp1.max(1).expandDims(1).mul(tf.scalar(0.99)).add(tf_rewards).buffer()
+    let Qtargets = tf.tensor2d(buffer.values, [size, 1]);
+
+    return Qtargets;
+}
+
+import * as findBuffer from './findBuffer';
+
+// Train the model
+async function train_model(states: number[][], actions:number[][], rewards:number[][], next_states:number[][]){
     var size = next_states.length;
+    console.log("size", size)
     // Transform each array into a tensor
-    // let tf_states = tf.tensor2d(states, shape=[states.length, 42]);
-    // let tf_rewards = tf.tensor2d(rewards, shape=[rewards.length, 1]);
-    // let tf_next_states = tf.tensor2d(next_states, shape=[next_states.length, 42]);
-    // let tf_actions = tf.tensor2d(actions, shape=[actions.length, 3]);
+    let tf_states = tf.tensor2d(states, [states.length, 42]);
+    let tf_rewards = tf.tensor2d(rewards, [rewards.length, 1]);
+    let tf_next_states = tf.tensor2d(next_states, [next_states.length, 42]);
+    let tf_actions = tf.tensor2d(actions, [actions.length, 7]);
+
     // Get the list of loss to compute the mean later in this function
-    let tf_states = states;
-    let tf_rewards = rewards;
-    let tf_next_states = next_states;
-    let tf_actions = actions;
-    // Get the list of loss to compute the mean later in this function
+
     let losses: any = []
 
-    // Get the QTargets
-    const Qtargets = tf.tidy(() => {
-        let Q_stp1 = model.predict(tf_next_states);
-        let Qtargets = tf.tensor2d(Q_stp1.max(1).expandDims(1).mul(tf.scalar(0.99)).add(tf_rewards).buffer().values, shape=[size, 1]);
-        return Qtargets;
-    });
+    const qTarget = await findQTarget(tf_next_states, tf_rewards, size)
+    const Qtargets = tf.tidy(() => {return qTarget})
 
+    console.log('Qtargets', Qtargets)
     // Generate batch of training and train the model
     let batch_size = 32;
     for (var b = 0; b < size; b+=32) {
@@ -488,19 +497,29 @@ function train_model(states: any, actions:any, rewards:any, next_states:any){
         const tf_actions_b = tf_actions.slice(b, to);
         const Qtargets_b = Qtargets.slice(b, to);
 
-        // Minimize the error
         model_optimizer.minimize(() => {
             const loss = model_loss(tf_states_b, tf_actions_b, Qtargets_b);
-            losses.push(loss.buffer().values[0]);
-            return loss;
-        });
+
+            findBuffer.find(loss).then((lossBuffer) => {
+                losses.push(lossBuffer.values[0]);
+                return lossBuffer
+            })
+            return loss
+        })
+        console.log('losses', losses)
+
+        // Minimize the error
+        // model_optimizer.minimize(() => {
+        //     const loss = model_loss(tf_states_b, tf_actions_b, Qtargets_b);
+        //     losses.push(loss.buffer().values[0]);
+        //     return loss;
+        // });
 
         // Dispose the tensors from the memory
         tf_states_b.dispose();
         tf_actions_b.dispose();
         Qtargets_b.dispose();
     }
-    console.log("Mean loss", mean(losses));
 
     // Dispose the tensors from the memory
     Qtargets.dispose();
