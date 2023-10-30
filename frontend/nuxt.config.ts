@@ -5,6 +5,9 @@ export default defineNuxtConfig({
   routeRules: {
     '/ai/**': { ssr: false },
   },
+  modules: [
+    '@pinia/nuxt',
+  ],
   postcss: {
     plugins: {
       tailwindcss: {},
