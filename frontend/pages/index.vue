@@ -172,20 +172,28 @@ const canPlay: Ref<boolean> = ref(false);
 socket.on('connection', () => {
     console.log('Connecté au serveur Socket.io');
 });
+
 socket.on('new_action', (data: {action: number, game: Game}) => {
     if(players.value){
+
         currentPlayer.value = players.value[data.action];
+        console.log("currentPlayer.value", currentPlayer.value)
     }
 });
 
-// players.value = [
-//     {id: 1, name:'Marc', color: 'Y'},
-//     {id: 2, name:'Marco', color: 'R'}
-// ]
-// currentPlayer.value = players.value[0]
+socket.on('set_players', (data: {creator: Players, challenger: Players}) => {
+    players.value = []
+    players.value.push(data.creator)
+    players.value.push(data.challenger)
+
+    players.value[0].color = 'R';
+    players.value[1].color = 'Y';
+
+});
 
 function play(state: {canPlay: boolean, reference: string}) {
     if(state.canPlay) {
+
         console.log("state.reference", state.reference)
 
         socket.emit('join_room', state.reference);

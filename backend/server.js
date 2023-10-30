@@ -27,9 +27,16 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
     console.log(`User Connected: ${socket.id}`);
 
-    socket.on("join_room", (data) => {
+    socket.on("join_room", async (data) => {
         console.log("join_room",data)
         socket.join(data);
+
+        try {
+            let result = await getPlayers(data);
+            io.to(data).emit("set_players", { creator: result.creator, challenger: result.challenger });
+        } catch (error) {
+            console.error(error);
+        }
     });
 
     socket.on("send_message", (data) => {
@@ -53,6 +60,54 @@ server.listen(PORT, () => {
 });
 
 // GAME PLAY
+
+async function getPlayers(reference) {
+    return new Promise((resolve, reject) => {
+        let sql = "SELECT * FROM game WHERE reference = '" + reference + "'";
+        let paramsCreator = [];
+
+        db.all(sql, paramsCreator, async function (err, games) {
+            if (err) {
+                console.log("erreur lors de la récupération de la game");
+                console.log(err);
+                reject(err);
+                return;
+            }
+
+            let game = games[0];
+            console.log('canPlay 8', true);
+            console.log("game.action", game.action);
+
+            // Récupération de l'utilisateur créateur (creatorId)
+            let creatorId = game.creator;
+            let creatorUser = await getUserById(creatorId);
+
+            // Récupération de l'utilisateur challenger (challengerId)
+            let challengerId = game.challenger;
+            let challengerUser = await getUserById(challengerId);
+
+            resolve({ creator: creatorUser, challenger: challengerUser });
+        });
+    });
+}
+
+async function getUserById(userId) {
+    return new Promise((resolve, reject) => {
+        let sql = "SELECT * FROM user WHERE id = " + userId;
+        let params = [];
+
+        db.all(sql, params, function (err, users) {
+            if (err) {
+                console.log("erreur lors de la récupération de l'utilisateur");
+                console.log(err);
+                reject(err);
+                return;
+            }
+            let user = users[0];
+            resolve(user);
+        });
+    });
+}
 
 async function playerAction(reference) {
     return new Promise((resolve, reject) => {
@@ -95,7 +150,7 @@ async function playerAction(reference) {
                                 }
                 
                                 // Les informations de la game après l'update sont dans la variable 'row'
-                                console.log("Informations de la game après l'update :", row);
+                                console.log("Informations de la game après l'update :", game);
                                 resolve({newAction: 1, game: game});
                             }
                         );
@@ -125,7 +180,7 @@ async function playerAction(reference) {
                                 }
                 
                                 // Les informations de la game après l'update sont dans la variable 'row'
-                                console.log("Informations de la game après l'update :", row);
+                                console.log("Informations de la game après l'update :", game);
                                 resolve({newAction: 0, game: game});
                             }
                         );
