@@ -12,10 +12,10 @@
                 </div>
                 <div v-else>
                     <ActiveGames v-if="activeGames.length > 0" :creator="user?.name" :activeGames="activeGames" @init-game-event="init" @can-play-event="play">
-                        Vos défis
+                        <h3 class="text-3xl text-center">Vos défis</h3>
                     </ActiveGames>
                     <ActiveGames v-if="challengeGames.length > 0" :creator="user?.name" :activeGames="challengeGames" @init-game-event="init" @can-play-event="play">
-                        Tout vos challenges
+                        <h3 class="text-3xl text-center">Tout vos challenges</h3>
                     </ActiveGames>
                 </div>
             </div>
@@ -54,9 +54,9 @@ const socket = io.connect('http://localhost:3001');
 // AUTH
 
 interface User {
-    token: string, 
-    name: string, 
-    player: string
+    token: string | null, 
+    name: string | null, 
+    player: string | null
 }
 
 const user: Ref<User | undefined> = ref();
@@ -65,33 +65,43 @@ const createProfile: Ref<boolean> =  ref(false);
 
 
 async function init() {
-    user.value = useAuthStore().getUser()
-    if(user?.value) {
-        console.log("UYVIUDYZUYDZ")
-        playerToken.value = user.value.token
-        createProfile.value = true;
-
-        const data = {
-            creator: user.value.player
+    if(localStorage && localStorage.getItem('token') != null) {
+        console.log("localStorage.getItem('token')", localStorage.getItem('token'))
+        console.log("localStorage.getItem('token')", localStorage.getItem('name'))
+        console.log("localStorage.getItem('token')", localStorage.getItem('player'))
+        user.value = {
+            token: localStorage.getItem('token'),
+            name: localStorage.getItem('name'),
+            player: localStorage.getItem('player'),
         }
 
-        await axiosApiIntance.post('/api/user/activeGames', data)
-        .then(async (response: any) => {
-                console.log(response.data)
-                activeGames.value = response.data.game
-            })
-            .catch((error: Promise<{}>) => {
-            console.log(error)
-        });
+        if(user?.value?.token != null) {
+            playerToken.value = user.value.token
 
-        await axiosApiIntance.post('/api/user/challengeGames', data)
-        .then(async (response: any) => {
-                console.log(response.data)
-                challengeGames.value = response.data.game
-            })
-            .catch((error: Promise<{}>) => {
-            console.log(error)
-        });
+            const data = {
+                creator: user.value.player
+            }
+
+            await axiosApiIntance.post('/api/user/activeGames', data)
+            .then(async (response: any) => {
+                    console.log(response.data)
+                    activeGames.value = response.data.game
+                })
+                .catch((error: Promise<{}>) => {
+                console.log(error)
+            });
+
+            await axiosApiIntance.post('/api/user/challengeGames', data)
+            .then(async (response: any) => {
+                    console.log(response.data)
+                    challengeGames.value = response.data.game
+                })
+                .catch((error: Promise<{}>) => {
+                console.log(error)
+            });
+        }
+    } else {
+        createProfile.value = true;
     }
 
     console.log('activeGames', activeGames.value)
@@ -104,7 +114,8 @@ async function generateToken(data : {name: string}): Promise<void> {
 
     await axiosApiIntance.post('/api/user/generateToken', data)
     .then(async (response: any) => {
-            await auth.setUser(response.data)
+            await auth.setUser(response.data);
+            await init();
             console.log(response.data)
             console.log('localstorage', localStorage)
         })
@@ -158,8 +169,13 @@ const challengeGames: Ref<Game[]> = ref([]);
 const joinGame: Ref<boolean> = ref(false);
 const canPlay: Ref<boolean> = ref(false);
 
-socket.on('new_action', (data: {action: number}) => {
-    console.log(data)
+socket.on('connection', () => {
+    console.log('Connecté au serveur Socket.io');
+});
+socket.on('new_action', (data: {action: number, game: Game}) => {
+    if(players.value){
+        currentPlayer.value = players.value[data.action];
+    }
 });
 
 // players.value = [
@@ -168,15 +184,18 @@ socket.on('new_action', (data: {action: number}) => {
 // ]
 // currentPlayer.value = players.value[0]
 
-function play(state: {canPlay: boolean}) {
-    console.log(state)
+function play(state: {canPlay: boolean, reference: string}) {
     if(state.canPlay) {
-        socket.emit('playerAction', {action: 1});      
+        console.log("state.reference", state.reference)
+
+        socket.emit('join_room', state.reference);
+        socket.emit('playAction', {room: state.reference});  
 
         gameSelected.value = true;
         canPlay.value = true;
+
+        console.log("CAN PLAY", canPlay.value)
     }
-    
 }
 
 function createNewGame(creator: {creator: string, challenger: number, name: string, gameId: number, gameReference: string}){

@@ -28,21 +28,21 @@ io.on("connection", (socket) => {
     console.log(`User Connected: ${socket.id}`);
 
     socket.on("join_room", (data) => {
+        console.log("join_room",data)
         socket.join(data);
     });
 
     socket.on("send_message", (data) => {
-        console.log(data)
-        // socket.broadcast.emit("receive_message", data)
         socket.to(data.room).emit("receive_message", data);
     });
 
-    socket.on("playAction", (data) => {
-        console.log(data)
-        let newAction = playerAction(data.playerAction)
-
-        // socket.broadcast.emit("receive_message", data)
-        socket.to(data.room).emit("new_action", {action: newAction});
+    socket.on("playAction", async (data) => {
+        try {
+            let result = await playerAction(data.room);
+            io.to(data.room).emit("new_action", { action: result.newAction, game: result.game });
+        } catch (error) {
+            console.error(error);
+        }
     });
 });
 
@@ -54,52 +54,87 @@ server.listen(PORT, () => {
 
 // GAME PLAY
 
-function playerAction(playerAction) {
+async function playerAction(reference) {
+    return new Promise((resolve, reject) => {
+        let sql = "SELECT * FROM game WHERE reference = '" + reference + "'";
+        let paramsCreator = [];
 
-    db.all(sql, paramsCreator, function (err, user) {
-        if (err){
-            res.status(400).json({"error": err.message})
-            console.log('canPlay 4', false)
-            return;
-        }
+        db.all(sql, paramsCreator, function (err, games) {
+            if (err) {
+                console.log("erreur lors de la récupération de la game");
+                console.log(err);
+                reject(err);
+                return;
+            }
+            let game = games[0];
+            console.log('canPlay 8', true);
+            console.log("game.action", game.action);
 
-        if(playerAction === 0) {
-            db.run(
-                "UPDATE game SET action=1 WHERE reference=?",
-                [data.reference],
-                function (err, result) {
-                    if (err){
-                        res.status(400).json({"error": res.message})
-                        return;
+            let newAction;
+            if (game.action === 0) {
+                db.run(
+                    "UPDATE game SET action=1 WHERE reference=?",
+                    [reference],
+                    function (err, result) {
+                        if (err) {
+                            console.log("erreur lors de la mise à jour de la game");
+                            console.log(err);
+                            reject(err);
+                            return;
+                        }
+                        console.log("Mise à jour effectué avec succès");
+                        db.get(
+                            "SELECT * FROM game WHERE reference=?",
+                            [reference],
+                            function (err, game) {
+                                if (err) {
+                                    console.log("Erreur lors de la récupération des données de la game après l'update");
+                                    console.log(err);
+                                    reject(err);
+                                    return;
+                                }
+                
+                                // Les informations de la game après l'update sont dans la variable 'row'
+                                console.log("Informations de la game après l'update :", row);
+                                resolve({newAction: 1, game: game});
+                            }
+                        );
                     }
-                    console.log(result)
-                    res.json({
-                        message: "success",
-                        action: 1
-                    })
-            });
-            return 1;
-        }
-
-        if(playerAction === 1) {
-            db.run(
-                "UPDATE game SET action=0 WHERE reference=?",
-                [data.reference],
-                function (err, result) {
-                    if (err){
-                        res.status(400).json({"error": res.message})
-                        return;
+                );
+            } else if (game.action === 1) {
+                db.run(
+                    "UPDATE game SET action=0 WHERE reference=?",
+                    [reference],
+                    function (err, result) {
+                        if (err) {
+                            console.log("erreur lors de la mise à jour de la game");
+                            console.log(err);
+                            reject(err);
+                            return;
+                        }
+                        console.log("Mise à jour effectué avec succès");
+                        db.get(
+                            "SELECT * FROM game WHERE reference=?",
+                            [reference],
+                            function (err, game) {
+                                if (err) {
+                                    console.log("Erreur lors de la récupération des données de la game après l'update");
+                                    console.log(err);
+                                    reject(err);
+                                    return;
+                                }
+                
+                                // Les informations de la game après l'update sont dans la variable 'row'
+                                console.log("Informations de la game après l'update :", row);
+                                resolve({newAction: 0, game: game});
+                            }
+                        );
+                        
                     }
-                    console.log(result)
-                    res.json({
-                        message: "success",
-                        action: 0
-                    })
-            });
-            return 0;
-        }
+                );
+            }
+        });
     });
-    
 }
 
 
@@ -142,7 +177,6 @@ app.post("/api/user/play", (req, res, next) => {
             }
         });
     });
-    
 });
 
 app.post("/api/user/createNewGame", async (req, res) => {
@@ -231,7 +265,7 @@ app.post("/api/user/activeGames", (req, res, next) => {
             res.status(400).json({"error": err.message})
             return;
         }
-        console.log("req.body.creator",req.body.creator)
+        console.log("req.body.creator", req.body.creator)
         let user = users[0];
         let sql = "SELECT * FROM game WHERE creator = '" + user.id + "' AND winner IS NULL";
         let params = []
@@ -348,32 +382,32 @@ app.patch("/api/user/joinNewGame", async (req, res, next) => {
         let sqlChallenger = "SELECT * FROM user WHERE player = '" + req.body.challenger + "'";
         let paramsChallenger = []
 
-        try {
-            let verifyGamePlayers = await new Promise((resolve, reject) => {
-                db.get("SELECT * FROM game WHERE reference=?", [req.body.reference], function (err, result) {
-                    if (err) {
-                        reject(err);
-                    }
-                    resolve(result);
-                });
-            });
+        // try {
+        //     let verifyGamePlayers = await new Promise((resolve, reject) => {
+        //         db.get("SELECT * FROM game WHERE reference=?", [req.body.reference], function (err, result) {
+        //             if (err) {
+        //                 reject(err);
+        //             }
+        //             resolve(result);
+        //         });
+        //     });
 
-            console.log(verifyGamePlayers);
+        //     console.log(verifyGamePlayers);
 
-            if (!verifyGamePlayers.creator || !verifyGamePlayers.challenger) {
-                res.status(200).json({
-                    message: "Challenger déjà existant pour ce jeu",
-                    data: verifyGamePlayers,
-                    canPlay: false
-                });
-                console.log("Ce joueur ne peux pas jouer")
-                return; // Arrête l'exécution du code ici
-            }
+        //     if (verifyGamePlayers.creator || verifyGamePlayers.challenger) {
+        //         res.status(200).json({
+        //             message: "",
+        //             data: verifyGamePlayers,
+        //             canPlay: true
+        //         });
+        //         console.log("Ce joueur ne peux pas jouer")
+        //         return; // Arrête l'exécution du code ici
+        //     }
             
-        } catch (error) {
-            // Access Denied
-            console.log(error)
-        } 
+        // } catch (error) {
+        //     // Access Denied
+        //     console.log(error)
+        // } 
         
         db.all(sqlChallenger, paramsChallenger, function (err, users) {
             if (err){

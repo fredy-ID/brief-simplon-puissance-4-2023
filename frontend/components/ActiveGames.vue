@@ -67,7 +67,7 @@ async function play(reference: string) {
                 error.value = response.data.message;
             }
 
-            emit('can-play-event', {canPlay: response.data.canPlay})
+            emit('can-play-event', {canPlay: response.data.canPlay, reference: data.reference})
 
             })
             .catch((error: Promise<{}>) => {

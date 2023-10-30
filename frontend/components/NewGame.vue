@@ -1,7 +1,8 @@
 <template>
     <div>
         <div class="mt-10">
-            Nouvelle partie !
+            
+            <h3 class="text-3xl text-center">Nouvelle partie !</h3>
             <div class="flex flex-row items-center justify-center">
                 <div class="card w-96 h-60 m-10 bg-neutral">
                     <div class="flex flex-col p-6 justify-around h-full">

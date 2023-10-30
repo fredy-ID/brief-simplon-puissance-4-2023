@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="mt-10">
-            Tout vos challenges
+            <slot />
             <div class="flex flex-row items-center justify-center">
                 <div v-for="(game, index) in activeGames" :key="index" class="card w-96 m-10 bg-neutral">
                     <div class="flex flex-col p-6 justify-around h-full">
