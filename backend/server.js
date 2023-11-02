@@ -18,13 +18,20 @@ app.use(cors());
 
 const server = http.createServer(app);
 
+let PORT = process.env.PORT || 3001; 
+server.listen(PORT, () => {
+    console.log("SERVER IS RUNNING");
+});
+
 const io = new Server(server, {
     cors: {
         origin: "*"
     },
 });
 
+
 io.on("connection", (socket) => {
+
     console.log(`User Connected: ${socket.id}`);
 
     socket.on("join_room", async (data) => {
@@ -51,15 +58,71 @@ io.on("connection", (socket) => {
             console.error(error);
         }
     });
+
+    socket.on("new_grid_state", async (data) => {
+        console.log("OUI")
+        try {
+            console.log("ACTUAL GRID", data.grid);
+            let result = await saveBoard(data.grid, data.reference);
+            io.to(data.reference).emit("set_board", { grid: result});
+        } catch (error) {
+            console.error(error);
+        }
+    });
+
+    socket.on('disconnect', async (data) => {
+        console.log(`User disconnected: ${socket.id}`);
+    });
 });
 
 
-let PORT = process.env.PORT || 3001; 
-server.listen(PORT, () => {
-    console.log("SERVER IS RUNNING");
-});
 
-// GAME PLAY
+// GAMEPLAY
+
+async function saveBoard(grid, reference) {
+    return new Promise((resolve, reject) => {
+        try {
+            let sql = "SELECT * FROM game WHERE reference = ?";
+            let params = [reference];
+
+            db.all(sql, params, async function (err, games) {
+                if (err) {
+                    console.log("Erreur lors de la récupération de la game");
+                    console.log(err);
+                    reject(err);
+                    return;
+                }
+
+                if (games.length === 0) {
+                    console.log("Aucune game trouvée avec la référence spécifiée.");
+                    reject("Aucune game trouvée avec la référence spécifiée.");
+                    return;
+                }
+
+                let game = games[0];
+                let gridString = JSON.stringify(grid);
+
+                db.run(
+                    "UPDATE board SET board=? WHERE game_id=?",
+                    [gridString, game.id],
+                    function (err, result) {
+                        if (err) {
+                            console.log("Erreur lors de la mise à jour de la game");
+                            console.log(err);
+                            reject(err);
+                            return;
+                        }
+                        console.log("Mise à jour effectuée avec succès");
+                        resolve(JSON.parse(gridString));
+                    }
+                );
+            });
+        } catch (err) {
+            console.log("Le tableau n'a pas pu être mis à jour");
+            reject(err);
+        }
+    });
+}
 
 async function getPlayers(reference) {
     return new Promise((resolve, reject) => {
@@ -200,8 +263,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.post("/api/user/play", (req, res, next) => {
+    
     console.log("req.body.player",req.body.player)
     console.log("req.body.reference",req.body.reference)
+
     let sqlCreator = "SELECT * FROM user WHERE player = '" + req.body.player + "'";
     let paramsCreator = []
     db.all(sqlCreator, paramsCreator, function (err, user) {
@@ -234,6 +299,8 @@ app.post("/api/user/play", (req, res, next) => {
     });
 });
 
+
+
 app.post("/api/user/createNewGame", async (req, res) => {
     console.log('generating token')
     try {
@@ -261,23 +328,43 @@ app.post("/api/user/createNewGame", async (req, res) => {
                     return;
                 }
 
-                // Envoyez la réponse au client après avoir inséré le jeu dans la base de données
-                res.json({
-                    gameId: this.lastID,
-                    creator: user[0].id,
-                    name: user.name,
-                    gameReference: data.gameReference
+                // Insérez un enregistrement dans la table board lié à la game nouvellement créée
+                let boardSql = 'INSERT INTO board (game_id, board, DateCreated) VALUES (?,?,?)';
+                let initialBoard = [
+                    ["E", "E", "E", "E", "E", "E", "E"],
+                    ["E", "E", "E", "E", "E", "E", "E"],
+                    ["E", "E", "E", "E", "E", "E", "E"],
+                    ["E", "E", "E", "E", "E", "E", "E"],
+                    ["E", "E", "E", "E", "E", "E", "E"],
+                    ["E", "E", "E", "E", "E", "E", "E"]
+                ];
+                let boardParams = [this.lastID, JSON.stringify(initialBoard), Date("now")];
+                db.run(boardSql, boardParams, function (err) {
+                    if (err) {
+                        res.status(400).json({"error": err.message});
+                        return;
+                    }
+
+                    // Envoyez la réponse au client après avoir inséré le jeu et le plateau dans la base de données
+                    res.json({
+                        gameId: this.lastID,
+                        creator: user[0].id,
+                        creatorName: user[0].name,
+                        name: user.name,
+                        gameReference: data.gameReference
+                    });
                 });
             });
         });
         
-
     } catch (err) {
         res.status(400).json({"error": err.message})
 
         res.send(""); 
     }
 });
+
+
 
 app.post("/api/user/generateToken", async (req, res) => {
     console.log('generating token')
@@ -329,6 +416,7 @@ app.post("/api/user/activeGames", (req, res, next) => {
             res.status(400).json({"error":err.message});
             return;
             }
+            
             res.send({game: rows, creator: user}); 
         });
     });

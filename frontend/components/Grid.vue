@@ -34,6 +34,10 @@
             type: Array as () => string[][],
             required: true,
         },
+        game: {
+            type: String,
+            required: true,
+        }
     });
 
     // watch works directly on a ref
@@ -53,7 +57,7 @@
     const colors: Ref<string[]> = ref(['yellow', 'red'])
 
     function dropEvent(color: string, rowIndex: number, colIndex: number) {
-        emit('drop-event', { color: color, row: rowIndex, col: colIndex})
+        emit('drop-event', { color: color, row: rowIndex, col: colIndex, reference: props.game})
     }
 
 

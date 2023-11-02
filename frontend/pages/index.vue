@@ -2,24 +2,24 @@
     <div v-if="playerToken">
         <div class="relative" v-if="!joinGame">
             <div v-if="activeGames.length > 0 || challengeGames.length > 0">
-                <div class="" v-if="gameSelected && canPlay">
+                <div class="" v-if="gameSelected != null && canPlay">
                     <!-- <NameSelector v-if="gameSelection" /> -->
                     <ColorSelector v-if="colorSelection" :playersList="players" />
                     <PlayScreen :color="currentPlayer?.color" :name="currentPlayer?.name" />
                     <VictoryScreen v-if="gameOver" :color="winner?.color" :name="winner?.name" @start-new-game-event="restartGame"/>
-                    <Grid :color="currentPlayer?.color" :grid="grid" @drop-event="gameEvent" />
+                    <Grid :game="gameSelected" :color="currentPlayer?.color" :grid="grid" @drop-event="gameEvent" />
                     <!-- <ChatPopUp /> -->
                 </div>
                 <div v-else>
-                    <ActiveGames v-if="activeGames.length > 0" :creator="user?.name" :activeGames="activeGames" @init-game-event="init" @can-play-event="play">
+                    <ActiveGames v-if="activeGames.length > 0" :isOwner="true" :user="user?.name" :activeGames="activeGames" @init-game-event="init" @can-play-event="play">
                         <h3 class="text-3xl text-center">Vos défis</h3>
                     </ActiveGames>
-                    <ActiveGames v-if="challengeGames.length > 0" :creator="user?.name" :activeGames="challengeGames" @init-game-event="init" @can-play-event="play">
+                    <ActiveGames v-if="challengeGames.length > 0" :isOwner="false" :user="user?.name" :activeGames="challengeGames" @init-game-event="init" @can-play-event="play">
                         <h3 class="text-3xl text-center">Tout vos challenges</h3>
                     </ActiveGames>
                 </div>
             </div>
-            <div v-if="!gameSelected">
+            <div v-if="gameSelected == null">
                 <NewGame @new-game-event="createNewGame" @join-new-game-event="joinNewGame" />
             </div>
         </div>
@@ -44,31 +44,107 @@
 </template>
 
 <script setup lang="ts">
-import { ref, Ref } from 'vue';
-import { useAuthStore } from '@/stores/auth'
-import axiosApiIntance from "@/services/axiosApiIntance"
 
+import { ref, Ref } from 'vue';
 import io from 'socket.io-client';
+import { useAuthStore } from '../stores/auth'
+import axiosApiIntance from "../services/axiosApiIntance"
 const socket = io.connect('http://localhost:3001');
 
-// AUTH
+interface Players {
+    id: number;
+    name: string;
+    color: string;
+    creator: string, 
+}
 
+interface Game {
+    id: number;
+    creator: string;
+    creatorName: string;
+    reference: string;
+    challenger: number;
+}
 interface User {
     token: string | null, 
     name: string | null, 
     player: string | null
 }
 
-const user: Ref<User | undefined> = ref();
-const playerToken: Ref<string | undefined> = ref();
-const createProfile: Ref<boolean> =  ref(false);
+
+const user              : Ref<User | undefined> = ref();
+const playerToken       : Ref<string | undefined> = ref();
+const createProfile     : Ref<boolean> =  ref(false);
+const players           : Ref<Players[] | undefined> =  ref()
+const gameSelection     : Ref<boolean> = ref(false);
+const colorSelection    : Ref<boolean> = ref(false);
+const gameOver          : Ref<boolean> = ref(false);
+const currentPlayer     : Ref<Players | undefined> = ref();
+const winner            : Ref<Players | undefined> = ref();
+const gameSelected      : Ref<string | null> =  ref(null);
+const activeGames       : Ref<Game[]> = ref([]);
+const challengeGames    : Ref<Game[]> = ref([]);
+const joinGame          : Ref<boolean> = ref(false);
+const canPlay           : Ref<boolean> = ref(false);
+
+    
+const board: Ref<string[][]> = ref([
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"]
+]);
+
+const grid: Ref<string[][]> = ref([
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"],
+    ["E", "E", "E", "E", "E", "E", "E"]
+]);
+
+
+
+socket.on('connection', () => {
+    console.log('Connecté au serveur Socket.io');
+});
+
+socket.on('new_action', (data: {action: number, game: Game}) => {
+    if(players.value){
+
+        currentPlayer.value = players.value[data.action];
+        console.log("currentPlayer.value", currentPlayer.value)
+    }
+});
+
+socket.on('set_players', (data: {creator: Players, challenger: Players}) => {
+    players.value = []
+    players.value.push(data.creator)
+    players.value.push(data.challenger)
+
+    players.value[0].color = 'R';
+    players.value[1].color = 'Y';
+
+});
+
+socket.on('set_board', (data: {grid: string[][]}) => {
+    console.log("__________ NEW BOARD STATE ____________", data.grid)
+    
+});
+
+
+// ********************************
+// ********************************
+// AUTH
+// ********************************
+// ********************************
 
 
 async function init() {
     if(localStorage && localStorage.getItem('token') != null) {
-        console.log("localStorage.getItem('token')", localStorage.getItem('token'))
-        console.log("localStorage.getItem('token')", localStorage.getItem('name'))
-        console.log("localStorage.getItem('token')", localStorage.getItem('player'))
         user.value = {
             token: localStorage.getItem('token'),
             name: localStorage.getItem('name'),
@@ -86,6 +162,7 @@ async function init() {
             .then(async (response: any) => {
                     console.log(response.data)
                     activeGames.value = response.data.game
+                    activeGames.value.creatorName = response.data.creator.name
                 })
                 .catch((error: Promise<{}>) => {
                 console.log(error)
@@ -124,72 +201,13 @@ async function generateToken(data : {name: string}): Promise<void> {
     });
 }
 
+
+// ********************************
+// ********************************
 // GAME
+// ********************************
+// ********************************
 
-interface Players {
-    id: number;
-    name: string;
-    color: string;
-    creator: string, 
-}
-
-interface Game {
-    id: number;
-    reference: string;
-    challenger: number;
-}
-
-const board: Ref<string[][]> = ref([
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"]
-]);
-
-const grid: Ref<string[][]> = ref([
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"],
-    ["E", "E", "E", "E", "E", "E", "E"]
-]);
-
-const players: Ref<Players[] | undefined> =  ref()
-const gameSelection: Ref<boolean> = ref(false);
-const colorSelection: Ref<boolean> = ref(false);
-const gameOver: Ref<boolean> = ref(false);
-const currentPlayer: Ref<Players | undefined> = ref();
-const winner: Ref<Players | undefined> = ref();
-const gameSelected: Ref<boolean> =  ref(false);
-const activeGames: Ref<Game[]> = ref([]);
-const challengeGames: Ref<Game[]> = ref([]);
-const joinGame: Ref<boolean> = ref(false);
-const canPlay: Ref<boolean> = ref(false);
-
-socket.on('connection', () => {
-    console.log('Connecté au serveur Socket.io');
-});
-
-socket.on('new_action', (data: {action: number, game: Game}) => {
-    if(players.value){
-
-        currentPlayer.value = players.value[data.action];
-        console.log("currentPlayer.value", currentPlayer.value)
-    }
-});
-
-socket.on('set_players', (data: {creator: Players, challenger: Players}) => {
-    players.value = []
-    players.value.push(data.creator)
-    players.value.push(data.challenger)
-
-    players.value[0].color = 'R';
-    players.value[1].color = 'Y';
-
-});
 
 function play(state: {canPlay: boolean, reference: string}) {
     if(state.canPlay) {
@@ -199,24 +217,27 @@ function play(state: {canPlay: boolean, reference: string}) {
         socket.emit('join_room', state.reference);
         socket.emit('playAction', {room: state.reference});  
 
-        gameSelected.value = true;
+        gameSelected.value = state.reference;
+
         canPlay.value = true;
 
         console.log("CAN PLAY", canPlay.value)
     }
 }
 
-function createNewGame(creator: {creator: string, challenger: number, name: string, gameId: number, gameReference: string}){
+function createNewGame(game: {creator: string, creatorName: string, challenger: number, name: string, gameId: number, gameReference: string}){
     const Creator: Players = {
         id: 1, 
-        name: creator.name, 
-        creator: creator.creator, 
+        name: game.name, 
+        creator: game.creator, 
         color: "R"
     };
     const Game: Game = {
-        id: creator.gameId,
-        reference: creator.gameReference,
-        challenger: creator.challenger,
+        id: game.gameId,
+        creator: game.creator,
+        creatorName: game.creatorName,
+        reference: game.gameReference,
+        challenger: game.challenger,
     }
 
     if (!players.value) {
@@ -232,11 +253,16 @@ function joinNewGame() {
     joinGame.value = true;
 }
 
-function gameEvent(stateOfPlay: { color: string; row: number; col: number }) {
+
+function gameEvent(stateOfPlay: { color: string; row: number; col: number; reference: string}) {
     console.log('stateOfPlay: ', stateOfPlay);
 
     // TODO : Envoyer changement etat grid en ligne
     grid.value[stateOfPlay.row][stateOfPlay.col] = stateOfPlay.color;
+
+    socket.emit("new_grid_state", {grid: grid.value, reference: stateOfPlay.reference});
+    console.log("OKOK")
+
 
     if (checkVictory(grid.value, stateOfPlay.row, stateOfPlay.col, stateOfPlay.color)) {
         gameOver.value = true;
@@ -249,8 +275,6 @@ function gameEvent(stateOfPlay: { color: string; row: number; col: number }) {
         }
     }
 }
-
-
 
 function hasPlayed(hasPlayedPlayer: Players) {
     if (gameSelection.value) {
@@ -336,3 +360,7 @@ function checkVictory(grid: string[][], row: number, col: number, player: string
 }
 
 </script>
+
+<style>
+
+</style>

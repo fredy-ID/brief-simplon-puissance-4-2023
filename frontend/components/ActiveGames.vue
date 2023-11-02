@@ -2,18 +2,18 @@
     <div>
         <div class="mt-10">
             <slot/>
-            <div class="flex flex-row items-center justify-center">
+            <div class="flex flex-row items-center justify-center text-white">
                 <div v-for="(game, index) in activeGames" :key="index" class="card w-96 m-10 bg-neutral">
                     <div class="flex flex-col p-6 justify-around h-full">
                         <div class="text-left h-32">
                             <ul>
-                                <li>Créateur: {{ creator }} </li>
+                                <li>Créateur: {{ game.creatorName }} </li>
                                 <li class="my-2">Challenger: {{ game.challenger }}</li>
                                 <li>Référence: {{ game.reference }}</li>
                             </ul>
                         </div>
                         
-                        <div :class="'tooltip tooltip-top w-full' + (clickCopyToClipboard ? 'tooltip-open tooltip-success' : '')" :data-tip="(clickCopyToClipboard ? 'Copié!' : 'Copier dans le press papier')">
+                        <div v-if="isOwner" :class="'tooltip tooltip-top w-full' + (clickCopyToClipboard ? 'tooltip-open tooltip-success' : '')" :data-tip="(clickCopyToClipboard ? 'Copié!' : 'Copier dans le press papier')">
                             <button class="btn btn-primary w-full" @click="copyToClipboard(game.reference)">Copier la référence</button>
                         </div>
                         <button class="btn btn-primary my-2" @click="play(game.reference)">Rejoindre</button>
@@ -32,6 +32,8 @@ import axiosApiIntance from "@/services/axiosApiIntance"
 
 interface Game {
     id: number;
+    creator: string;
+    creatorName: string;
     reference: string;
     challenger: string;
 }
@@ -41,9 +43,13 @@ const props = defineProps({
         type: Array as () => Game[],
         required: false,
     },
-    creator: {
+    user: {
         type: String,
-        required: false,
+        required: true,
+    },
+    isOwner: {
+        type: Boolean,
+        required: true,
     }
 });
 
@@ -56,7 +62,7 @@ const clickCopyToClipboard: Ref<boolean> = ref(false)
 async function play(reference: string) {
 
     const data = {
-        player: props.creator,
+        player: props.user,
         reference: reference
     }
 
